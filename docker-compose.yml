@@ -1,0 +1,90 @@
+services:
+  postgres:
+    image: postgres:latest
+    container_name: postgres
+    environment:
+      POSTGRES_USER: ramp-up
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ramp-up
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:latest 
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  front_end:
+    build:
+      dockerfile: Dockerfile
+      context: ./front-end
+      target: development
+    command: npm run start
+    volumes:
+      - ./front-end:/front-end/src/app
+      - /front-end/src/app/node_modules
+    ports:
+      - "4200:4200"
+    links:
+      - api_service
+    depends_on:
+      - api_service
+
+  api_service:
+    build:
+      dockerfile: Dockerfile
+      context: ./api-service
+      target: development
+    volumes:
+      - ./api-service:/api-service/src/app
+      - /api-service/src/app/node_modules
+    command: npm run start:dev
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - postgres
+
+  notification_service:
+    build:
+      dockerfile: Dockerfile
+      context: ./notification-service
+      target: development
+    volumes:
+      - ./notification-service:/notification-service/src/app
+      - /notification-service/src/app/node_modules
+    command: npm run start:dev
+    environment:
+      NODE_ENV: development
+      PORT: 3001
+    ports:
+      - "3001:3001"
+    depends_on:
+      - redis
+
+  upload_service:
+    build:
+      dockerfile: Dockerfile
+      context: ./upload-service
+      target: development
+    volumes:
+      - ./upload-service:/upload-service/src/app
+      - /upload-service/src/app/node_modules
+    command: npm run start:dev
+    environment:
+      NODE_ENV: development
+      PORT: 3002
+    ports:
+      - "3002:3002"
+
+volumes:
+  postgres_data:
+  redis_data:
+  front_end_data:
